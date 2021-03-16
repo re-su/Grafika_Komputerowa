@@ -4,27 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-  <link rel="stylesheet" href="/resources/demos/style.css">
     <script>
-        var degree = 90;
-        $( function() {
-            $( "#slider-vertical" ).slider({
-              orientation: "vertical",
-              range: "min",
-              min: 0,
-              max: 360,
-              value: 90,
-              slide: function( event, ui ) {
-                $( "#amount" ).val( ui.value );
-                degree = ui.value;
-              }
-            });
-            $( "#amount" ).val( $( "#slider-vertical" ).slider( "value" ) );
-          } );
-
         var gl;
         function startGL() 
         {
@@ -130,7 +110,7 @@
            0                         ,0                           ,-(zFar+zNear)/(zFar-zNear)  , -1,
            0                         ,0                           ,-(2*zFar*zNear)/(zFar-zNear) ,0.0,
           ];
-          let angle = degree; //Macierz transformacji świata - określenie położenia kamery 
+          let angle = 90; //Macierz transformacji świata - określenie położenia kamery 
           let uMVMatrix = [
           Math.cos(angle*Math.PI/180.0),-Math.sin(angle*Math.PI/180.0),0,0, //Macierz Rotacji
           Math.sin(angle*Math.PI/180.0),Math.cos(angle*Math.PI/180.0),0,0,
@@ -165,12 +145,5 @@
 </head>
 <body onload="startGL()">
     <canvas id="canvas3D" width="640" height="480" style="border: 1px solid black"></canvas>
-
-    <p>
-        <label for="amount">Kąt:</label>
-        <input type="text" id="amount" readonly style="border:0; color:#f6931f; font-weight:bold;">
-      </p>
-
-      <div id="slider-vertical" style="height:200px;"></div>
 </body>
 </html>
