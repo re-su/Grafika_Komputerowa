@@ -1,0 +1,511 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<script type="text/javascript">
+var gl;
+var shaderProgram;
+var uPMatrix;
+var vertexPositionBuffer;
+var vertexColorBuffer;
+
+function MatrixMul(a,b) //Mnożenie macierzy
+{
+  c = [
+  0,0,0,0,
+  0,0,0,0,
+  0,0,0,0,
+  0,0,0,0
+  ]
+  for(let i=0;i<4;i++)
+  {
+    for(let j=0;j<4;j++)
+    {
+      c[i*4+j] = 0.0;
+      for(let k=0;k<4;k++)
+      {
+        c[i*4+j]+= a[i*4+k] * b[k*4+j];
+      }
+    }
+  }
+  return c;
+}
+
+function startGL() 
+{
+  //alert("StartGL");
+  let canvas = document.getElementById("canvas3D"); //wyszukanie obiektu w strukturze strony 
+  gl = canvas.getContext("experimental-webgl"); //pobranie kontekstu OpenGL'u z obiektu canvas
+  gl.viewportWidth = canvas.width; //przypisanie wybranej przez nas rozdzielczości do systemu OpenGL
+  gl.viewportHeight = canvas.height;
+  
+    //Kod shaderów
+  const vertextShaderSource = ` //Znak akcentu z przycisku tyldy - na lewo od przycisku 1 na klawiaturze
+    precision highp float;
+    attribute vec3 aVertexPosition; 
+    attribute vec3 aVertexColor;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    varying vec3 vColor;
+    void main(void) {
+      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); //Dokonanie transformacji położenia punktów z przestrzeni 3D do przestrzeni obrazu (2D)
+      vColor = aVertexColor;
+    }
+  `;
+  const fragmentShaderSource = `
+    precision highp float;
+    varying vec3 vColor;
+    void main(void) {
+      gl_FragColor = vec4(vColor,1.0); //Ustalenie stałego koloru wszystkich punktów sceny
+    }
+  `;
+  let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER); //Stworzenie obiektu shadera 
+  let vertexShader   = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(fragmentShader, fragmentShaderSource); //Podpięcie źródła kodu shader
+  gl.shaderSource(vertexShader, vertextShaderSource);
+  gl.compileShader(fragmentShader); //Kompilacja kodu shader
+  gl.compileShader(vertexShader);
+  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) { //Sprawdzenie ewentualnych błedów kompilacji
+    alert(gl.getShaderInfoLog(fragmentShader));
+    return null;
+  }
+  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+    alert(gl.getShaderInfoLog(vertexShader));
+    return null;
+  }
+  
+  shaderProgram = gl.createProgram(); //Stworzenie obiektu programu 
+  gl.attachShader(shaderProgram, vertexShader); //Podpięcie obu shaderów do naszego programu wykonywanego na karcie graficznej
+  gl.attachShader(shaderProgram, fragmentShader);
+  gl.linkProgram(shaderProgram);
+  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) alert("Could not initialise shaders");  //Sprawdzenie ewentualnych błedów
+  
+  //Opis sceny 3D, położenie punktów w przestrzeni 3D w formacie X,Y,Z 
+  let vertexPosition = [
+  //Top
+    -1.0, +1.0, -1.0,  -1.0, +1.0, +1.0,  +1.0, +1.0, +1.0, //3 punkty po 3 składowe - X1,Y1,Z1, X2,Y2,Z2, X3,Y3,Z3 - 1 trójkąt
+    -1.0, +1.0, -1.0,  +1.0, +1.0, +1.0,  +1.0, +1.0, -1.0,
+  //Left
+    -1.0, -1.0, +1.0,  -1.0, +1.0, +1.0,  -1.0, -1.0, -1.0,
+    -1.0, -1.0, -1.0,  -1.0, +1.0, +1.0,  -1.0, +1.0, -1.0,
+  //Right
+    +1.0, +1.0, +1.0,  +1.0, -1.0, +1.0,  +1.0, -1.0, -1.0,
+    +1.0, +1.0, +1.0,  +1.0, -1.0, -1.0,  +1.0, +1.0, -1.0,
+
+
+      //Top
+      -1.0, +1.0, -2.0,  -1.0, +1.0, 0.0,  +1.0, +1.0, 0.0, //3 punkty po 3 składowe - X1,Y1,Z1, X2,Y2,Z2, X3,Y3,Z3 - 1 trójkąt
+      -1.0, +1.0, -2.0,  +1.0, +1.0, 0.0,  +1.0, +1.0, -2.0,
+    //Left
+      -1.0, -1.0, 0.0,  -1.0, +1.0, 0.0,  -1.0, -1.0, -2.0,
+      -1.0, -1.0, -2.0,  -1.0, +1.0, 0.0,  -1.0, +1.0, -2.0,
+    //Right
+    +1.0, +1.0, 0.0,  +1.0, -1.0, 0.0,  +1.0, -1.0, -2.0,
+    +1.0, +1.0, 0.0,  +1.0, -1.0, -2.0,  +1.0, +1.0, -2.0,
+
+  
+    //Top
+    -1.0, +1.0, -3.0,  -1.0, +1.0, -1.0,  +1.0, +1.0, -1.0, //3 punkty po 3 składowe - X1,Y1,Z1, X2,Y2,Z2, X3,Y3,Z3 - 1 trójkąt
+    -1.0, +1.0, -3.0,  +1.0, +1.0, -1.0,  +1.0, +1.0, -3.0,
+    //Left
+    -1.0, -1.0, -1.0,  -1.0, +1.0, -1.0,  -1.0, -1.0, -3.0,
+    -1.0, -1.0, -3.0,  -1.0, +1.0, -1.0,  -1.0, +1.0, -3.0,
+    //Right
+    +1.0, +1.0, -1.0,  +1.0, -1.0, -1.0,  +1.0, -1.0, -3.0,
+    +1.0, +1.0, -1.0,  +1.0, -1.0, -3.0,  +1.0, +1.0, -3.0,
+    
+    //Right
+    +2.0, +1.0, -3.0,  +2.0, -1.0, -3.0,  +1.0, -1.0, -3.0,
+    +2.0, +1.0, -3.0,  +1.0, -1.0, -3.0,  +1.0, +1.0, -3.0,
+    //Left
+    -1.0, -1.0, -2.0,  -1.0, +1.0, -2.0,  -1.0, -1.0, -10.0,
+    -1.0, -1.0, -10.0,  -1.0, +1.0, -2.0,  -1.0, +1.0, -10.0,
+    //Right
+    +17.0, +1.0, -3.0,  +17.0, -1.0, -3.0,  +2.0, -1.0, -3.0,
+    +17.0, +1.0, -3.0,  +2.0, -1.0, -3.0,  +2.0, +1.0, -3.0,
+    //Left
+    +10.0, +1.0, -7.0,  +10.0, -1.0, -7.0,  -1.0, -1.0, -7.0,
+    +10.0, +1.0, -7.0,  -1.0, -1.0, -7.0,  -1.0, +1.0, -7.0,
+
+    //Right | pionowe
+    +17.0, +1.0, -3.0,  +17.0, -1.0, -3.0,  +17.0, -1.0, -18.0,
+    +17.0, +1.0, -18.0,  +17.0, -1.0, -18.0,  +17.0, +1.0, -3.0,
+    //Left
+    +10.0, +1.0, -10.0,  +10.0, -1.0, -10.0,  -1.0, -1.0, -10.0,
+    +10.0, +1.0, -10.0,  -1.0, -1.0, -10.0,  -1.0, +1.0, -10.0,
+    //Right
+    +15.0, +1.0, -12.0,  +15.0, -1.0, -12.0,  +2.0, -1.0, -12.0,
+    +15.0, +1.0, -12.0,  +2.0, -1.0, -12.0,  +2.0, +1.0, -12.0,
+    //Left
+    +15.0, +1.0, -12.0,  +15.0, -1.0, -12.0,  +15.0, -1.0, -21.0,
+    +15.0, +1.0, -21.0,  +15.0, -1.0, -21.0,  +15.0, +1.0, -12.0,
+    //left
+    +10.0, +1.0, -21.0,  +10.0, -1.0, -21.0,  +2.0, -1.0, -21.0,
+    +10.0, +1.0, -21.0,  +2.0, -1.0, -21.0,  +2.0, +1.0, -21.0,
+    //Right | poziome
+    +17.0, +1.0, -18.0,  +17.0, -1.0, -18.0,  +29.0, -1.0, -18.0,
+    +17.0, +1.0, -18.0,  +29.0, -1.0, -18.0,  +29.0, +1.0, -18.0,
+    //left | poziome
+    +17.0, +1.0, -21.0,  +17.0, -1.0, -21.0,  +26.0, -1.0, -21.0,
+    +17.0, +1.0, -21.0,  +26.0, -1.0, -21.0,  +26.0, +1.0, -21.0,
+    //Right | pionowe
+    +29.0, +1.0, -28.0,  +29.0, -1.0, -28.0,  +29.0, -1.0, 4.0,
+    +29.0, +1.0, 4.0,  +29.0, -1.0, 4.0,  +29.0, +1.0, -28.0,
+    //Left | pionowe
+    +26.0, +1.0, -25.0,  +26.0, -1.0, -25.0,  +26.0, -1.0, -21.0,
+    +26.0, +1.0, -21.0,  +26.0, -1.0, -21.0,  +26.0, +1.0, -25.0,
+    //left | poziome
+    -4.0, +1.0, -25.0,  -4.0, -1.0, -25.0,  +26.0, -1.0, -25.0,
+    -4.0, +1.0, -25.0,  +26.0, -1.0, -25.0,  +26.0, +1.0, -25.0,
+    //right | poziome
+    -8.0, +1.0, -28.0,  -8.0, -1.0, -28.0,  +29.0, -1.0, -28.0,
+    -8.0, +1.0, -28.0,  +29.0, -1.0, -28.0,  +29.0, +1.0, -28.0,
+    //Right | pionowe
+    -8.0, +1.0, -28.0,  -8.0, -1.0, -28.0,  -8.0, -1.0, 0.0,
+    -8.0, +1.0, 0.0,  -8.0, -1.0, 0.0,  -8.0, +1.0, -28.0,
+    //Left | pionowe
+    -4.0, +1.0, -25.0,  -4.0, -1.0, -25.0,  -4.0, -1.0, 4.0,
+    -4.0, +1.0, 4.0,    -4.0, -1.0, 4.0,    -4.0, +1.0, -25.0,
+    //right | pionowe
+    2.0, +1.0, -21.0,  2.0, -1.0, -21.0,  2.0, -1.0, -12.0,
+    2.0, +1.0, -12.0,    2.0, -1.0, -12.0,    2.0, +1.0, -21.0,
+    //right | pionowe
+    -1.0, +1.0, -21.0,  -1.0, -1.0, -21.0,  -1.0, -1.0, -10.0,
+    -1.0, +1.0, -10.0,    -1.0, -1.0, -10.0,    -1.0, +1.0, -21.0,
+    //Left | pionowe
+    -12.0, +1.0, -32.0,  -12.0, -1.0, -32.0,  -12.0, -1.0, 4.0,
+    -12.0, +1.0, 4.0,    -12.0, -1.0, 4.0,    -12.0, +1.0, -32.0,
+    //Right | poziome
+    -12.0, +1.0, 4.0,  -12.0, -1.0, 4.0,  -4.0, -1.0, 4.0,
+    -12.0, +1.0, 4.0,  -4.0, -1.0, 4.0,  -4.0, +1.0, 4.0,
+    //Left | pionowe
+    -1.0, +1.0, -25.0,  -1.0, -1.0, -25.0,  -1.0, -1.0, -10.0,
+    -1.0, +1.0, -10.0,    -1.0, -1.0, -10.0,    -1.0, +1.0, -25.0,
+    //Right | poziome
+    -12.0, +1.0, -32.0,  -12.0, -1.0, -32.0,  33.0, -1.0, -32.0,
+    -12.0, +1.0, -32.0,  33.0, -1.0, -32.0,  33.0, +1.0, -32.0,
+    //Left | pionowe
+    33.0, +1.0, -32.0,  33.0, -1.0, -32.0,  33.0, -1.0, 4.0,
+    33.0, +1.0, 4.0,    33.0, -1.0, 4.0,    33.0, +1.0, -32.0,
+    //Right | poziome
+    -12.0, +1.0, 4.0,  -12.0, -1.0, 4.0,  29.0, -1.0, 4.0,
+    -12.0, +1.0, 4.0,  29.0, -1.0, 4.0,  29.0, +1.0, 4.0,
+  //FLOOR
+  -12.0, -1.0, +4.0,  -12.0, -1.0, -32.0,  +33.0, -1.0, +4.0,
+  +33.0, -1.0, +4.0,  -12.0, -1.0, -32.0,  +33.0, -1.0, -32.0,
+  ]
+  
+  vertexPositionBuffer = gl.createBuffer(); //Stworzenie tablicy w pamieci karty graficznej
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPosition), gl.STATIC_DRAW);
+  vertexPositionBuffer.itemSize = 3; //zdefiniowanie liczby współrzednych per wierzchołek
+  vertexPositionBuffer.numItems = 100; //Zdefinoiowanie liczby punktów w naszym buforze
+  
+  //Opis sceny 3D, kolor każdego z wierzchołków
+  let vertexColor = [
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+  1,1,1,  1,1,1,  1,1,1,
+  1,1,1,  1,1,1,  1,1,1,
+
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360, 
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.211, 0.647, 0.827,  0.121, 0.176, 0.278,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.211, 0.647, 0.827, 
+  0.121, 0.176, 0.278,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.039, 0.384, 1, 
+  0.121, 0.176, 0.278, 0.039, 0.384, 1,  0.211, 0.647, 0.827,
+
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360, 
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.211, 0.647, 0.827,  0.121, 0.176, 0.278,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.211, 0.647, 0.827, 
+  0.121, 0.176, 0.278,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.039, 0.384, 1, 
+  0.121, 0.176, 0.278, 0.039, 0.384, 1,  0.211, 0.647, 0.827,
+
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360, 
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.211, 0.647, 0.827,  0.121, 0.176, 0.278,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.211, 0.647, 0.827, 
+  0.121, 0.176, 0.278,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.039, 0.384, 1, 
+  0.121, 0.176, 0.278, 0.039, 0.384, 1,  0.211, 0.647, 0.827,
+
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360, //3 punkty po 3 składowe - R1,G1,B1, R2,G2,B2, R3,G3,B3 - 1 trójkąt
+    0.156, 0.670, 0.886,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.360, 0.360, 0.360,
+
+  0.019, 0.317, 0.439,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.211, 0.647, 0.827,  0.121, 0.176, 0.278,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827, 
+  0.243, 0.882, 0.898,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.211, 0.647, 0.827, 
+  0.121, 0.176, 0.278,  0.360, 0.360, 0.360,  0.211, 0.647, 0.827,
+
+  0.243, 0.882, 0.898, 0.121, 0.176, 0.278,  0.039, 0.384, 1, 
+  0.121, 0.176, 0.278, 0.039, 0.384, 1,  0.211, 0.647, 0.827,
+]
+
+ vertexColorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexColor), gl.STATIC_DRAW);
+  vertexColorBuffer.itemSize = 3;
+  vertexColorBuffer.numItems = 200;
+  
+  
+  //Macierze opisujące położenie wirtualnej kamery w przestrzenie 3D
+  let aspect = gl.viewportWidth/gl.viewportHeight;
+  let fov = 45.0 * Math.PI / 180.0; //Określenie pola widzenia kamery
+  let zFar = 100.0; //Ustalenie zakresów renderowania sceny 3D (od obiektu najbliższego zNear do najdalszego zFar)
+  let zNear = 0.1;
+  uPMatrix = [
+   1.0/(aspect*Math.tan(fov/2)),0                           ,0                         ,0                            ,
+   0                         ,1.0/(Math.tan(fov/2))         ,0                         ,0                            ,
+   0                         ,0                           ,-(zFar+zNear)/(zFar-zNear)  , -1,
+   0                         ,0                           ,-(2*zFar*zNear)/(zFar-zNear) ,0.0,
+  ];
+  Tick();
+} 
+//let angle = 45.0; //Macierz transformacji świata - określenie położenia kamery
+var angleZ = 0.0;
+var angleY = 0.0;
+var angleX = 0.0;
+var tz = 0.0;
+var tx = 0.0;
+var ty = 0.0;
+function Tick()
+{
+
+  let uMVMatrix = [
+  1,0,0,0, //Macierz jednostkowa
+  0,1,0,0,
+  0,0,1,0,
+  0,0,0,1
+  ];
+  
+  let uMVRotZ = [
+  +Math.cos(angleZ*Math.PI/180.0),+Math.sin(angleZ*Math.PI/180.0),0,0,
+  -Math.sin(angleZ*Math.PI/180.0),+Math.cos(angleZ*Math.PI/180.0),0,0,
+  0,0,1,0,
+  0,0,0,1
+  ];
+  
+  let uMVRotY = [
+  +Math.cos(angleY*Math.PI/180.0),0,-Math.sin(angleY*Math.PI/180.0),0,
+  0,1,0,0,
+  +Math.sin(angleY*Math.PI/180.0),0,+Math.cos(angleY*Math.PI/180.0),0,
+  0,0,0,1
+  ];
+  
+  let uMVRotX = [
+  1,0,0,0,
+  0,+Math.cos(angleX*Math.PI/180.0),+Math.sin(angleX*Math.PI/180.0),0,
+  0,-Math.sin(angleX*Math.PI/180.0),+Math.cos(angleX*Math.PI/180.0),0,
+  0,0,0,1
+  ];
+  
+  let uMVTranslateZ = [
+  1,0,0,0,
+  0,1,0,0,
+  0,0,1,0,
+  0,0,tz,1
+  ];
+
+  let uMVTranslateX = [
+  1,0,0,0,
+  0,1,0,0,
+  0,0,1,0,
+  tx,0,0,1
+  ];
+
+  
+  let uMVTranslateY = [
+  1,0,0,0,
+  0,1,0,0,
+  0,0,1,0,
+  0,ty,0,1
+  ];
+
+  if(!map){
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateX);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateY);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateZ);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotX);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotY);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotZ);
+  } else {
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotX);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotY);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVRotZ);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateX);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateY);
+    uMVMatrix = MatrixMul(uMVMatrix,uMVTranslateZ);
+  }
+  //alert(uPMatrix);
+  
+  //Render Scene
+  gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight); 
+  gl.clearColor(1.0,0.0,0.0,1.0); //Wyczyszczenie obrazu kolorem czerwonym
+  gl.clearDepth(1.0);             //Wyczyścienie bufora głebi najdalszym planem
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(shaderProgram)   //Użycie przygotowanego programu shaderowego
+  
+  gl.enable(gl.DEPTH_TEST);           // Włączenie testu głębi - obiekty bliższe mają przykrywać obiekty dalsze
+  gl.depthFunc(gl.LEQUAL);            // 
+  
+  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uPMatrix"), false, new Float32Array(uPMatrix)); //Wgranie macierzy kamery do pamięci karty graficznej
+  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMVMatrix"), false, new Float32Array(uMVMatrix));
+  
+  gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));  //Przekazanie położenia
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+  
+  gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexColor"));  //Przekazanie kolorów
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
+  gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexColor"), vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+  
+  gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
+   
+  setTimeout(Tick,100);
+}
+var map = false;
+var tempX;
+var tempY;
+var tempZ;
+var tempXt;
+var tempYt;
+var tempZt;
+
+function handlekeydown(e)
+{
+
+ if(e.keyCode==83) angleX=angleX+1.0; //S
+ if(e.keyCode==87) angleX=angleX-1.0; //W
+ if(e.keyCode==68) angleY=angleY+1.0; //A
+ if(e.keyCode==65) angleY=angleY-1.0; //D
+ if(e.keyCode==81) angleZ=angleZ+1.0; //Q
+ if(e.keyCode==69) angleZ=angleZ-1.0; //E
+ if(e.keyCode==38) tz=tz-0.2; // ARROW UP
+ if(e.keyCode==40) tz=tz+0.2; // ARROW DOWN
+ if(e.keyCode==37) tx=tx-0.2; // ARROW LEFT
+ if(e.keyCode==39) tx=tx+0.2; // ARROW RIGHT
+ if(e.keyCode==107) ty=ty+0.2; // +
+ if(e.keyCode==109) ty=ty-0.2; // -
+ if(e.keyCode==77){ //m
+  if(map)
+  {
+     angleX = tempX;
+     angleY = tempY;
+     angleZ = tempZ;
+     
+     tx = tempXt;
+     ty = tempYt;
+     tz = tempZt;
+
+     map = false;
+
+     return;
+   }
+
+  map = true;
+   tempX = angleX;
+   tempY = angleY;
+   tempZ = angleZ;
+   tempXt = tx;
+   tempYt = ty;
+   tempZt = tz;
+
+   angleX = -119;
+   angleY = 159;
+   angleZ = -183;
+
+   tx = -10;
+   ty = -6.2;
+   tz = -46;
+
+ }
+ if(e.keyCode==82){
+  angleX = 0;
+  angleY = 0;
+  angleZ = 0;
+
+  tx = 0;
+  ty = 0;
+  tz = 0;
+
+  map = false;
+ }
+ console.log(
+   angleX, angleY, angleZ, tx, ty, tz //{-115 169 -183 -10 -6.2 -46}
+ )
+}
+</script>
+</head>
+<body onload="startGL()" onkeydown="handlekeydown(event)">
+<canvas id="canvas3D" width="640" height="480" style="border: solid black 1px"></canvas>
+<p>Press M to close/open map</p>
+<p>Press R to reset your position</p>
+<p>Kamera - WASD</p>
+<p>Przód i boki strzałkami</p>
+</body>
+</html>
