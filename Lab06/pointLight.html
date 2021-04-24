@@ -263,7 +263,7 @@ function startGL()
   
   let vertexCoords = []; //3 punkty po 2 składowe - U1,V1, U2,V2, U3,V3 - 1 trójkąt
   
-  for(let i = 0; i < vertexPosition.length - 4*6*9; i += 1)
+  for(let i = 0; i < vertexPosition.length; i += 1)
   {
     vertexCoords.push(...createRectCoords(0,0,1/2,0,0,1/2));
   }
