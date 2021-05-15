@@ -1,8 +1,17 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<script src="Cube.js"></script>
+
+<script src="jquery.js"></script>
+
 <script src="Functions.js"></script>
+<script src="Light.js"></script>
+<script src="Cube.js"></script>
+<script src="Limb.js"></script>
+<script src="Arm.js"></script>
+<script src="Leg.js"></script>
+<script src="Robot.js"></script>
+
 <script type="text/javascript">
 var gl;
 var shaderProgram;
@@ -13,9 +22,9 @@ var vertexCoordsBuffer;
 var vertexNormalBuffer;
 var indexBuffer;
 
-function startGL() 
+async function startGL() 
 {
-  alert("StartGL");
+  alert("Uwaga! Użyto tutaj AJAX i fetch do wczytania pliku .obj");
   let canvas = document.getElementById("canvas3D"); //wyszukanie obiektu w strukturze strony 
   gl = canvas.getContext("experimental-webgl"); //pobranie kontekstu OpenGL'u z obiektu canvas
   gl.viewportWidth = canvas.width; //przypisanie wybranej przez nas rozdzielczości do systemu OpenGL
@@ -85,8 +94,10 @@ function startGL()
   
   //[vertexPosition, vertexColor, vertexCoords, vertexNormal] = CreateShpere(0,0,0,2, 6, 12); 
   //[indexes, vertexPosition, vertexNormal] = CreateBox(0,0,0,1,1,1);
-  [indexes, vertexPosition, vertexNormal] = CreateTetris();
-  
+  //[indexes, vertexPosition, vertexNormal] = CreateTetris();
+  [indexes, vertexPosition, vertexNormal] = await wioska();
+  console.log(vertexPosition);
+
   vertexPositionBuffer = gl.createBuffer(); //Stworzenie tablicy w pamieci karty graficznej
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPosition), gl.STATIC_DRAW);
@@ -119,88 +130,33 @@ function startGL()
 } 
 
 var angleZ = 0.0;
-var angleY = 0.0;
+var angleY = -90.0;
 var angleX = 0.0;
-var KameraPositionZ = -8.0;
-var Object1PositionX = 0.0;
-var Object1PositionY = 0.0;
-var Object1PositionZ = 0.0;
-var Object1AngleZ = 0.0;
-var Object2PositionX = 1.0;
-var Object2PositionY = 0.0;
-var Object2PositionZ = 0.0;
-var Object2AngleZ = 0.0;
-var Object3PositionX = 1.0;
-var Object3PositionY = 0.0;
-var Object3PositionZ = 0.0;
-var Object3AngleZ = 0.0;
-var LightSize = 0.1;
-var Object1Sizedx = 1.0;
-var Object1Sizedy = 0.2;
-var Object1Sizedz = 0.1;
-var Object2Sizedx = 1.0;
-var Object2Sizedy = 0.2;
-var Object2Sizedz = 0.1;
-var Object3Sizedx = 0.4;
-var Object3Sizedy = 0.2;
-var Object3Sizedz = 0.1;
-var LightPositionX = 0;
-var LightPositionY = 0;
-var LightPositionZ = 3;
+var KameraPositionZ = -70.0;
 
-//let cube1 = new Cube(0, 0, 0, 1.0, 0.2, 0.1);
+var objects = [];
+var lights = [];
+
+//objects.push(new Robot(0,0,-9));
+objects.push(new Cube(0, 0, 0, 1, 1, 1, 0, 0, 0))
+lights.push(new Light(5, 0, 3, 0.1));
 
 function Tick()
 { 
-  let uMMatrix0 = CreateIdentytyMatrix(); 
-  let uMMatrix1 = CreateIdentytyMatrix();
-  let uMMatrix2 = CreateIdentytyMatrix();
-  let uMMatrix3 = CreateIdentytyMatrix();
-  
   let uVMatrix = CreateIdentytyMatrix();
-  
-  
+
   uVMatrix = MatrixMul(uVMatrix,CreateRotationXMatrix(angleX));
   uVMatrix = MatrixMul(uVMatrix,CreateRotationYMatrix(angleY));
   uVMatrix = MatrixMul(uVMatrix,CreateRotationZMatrix(angleZ));
   uVMatrix = MatrixMul(uVMatrix,CreateTranslationMatrix(0,0,KameraPositionZ));
   
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateScaleMatrix(Object1Sizedx,Object1Sizedy,Object1Sizedz));
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix1 = MatrixMul(uMMatrix1,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));  
+  for(object of objects){
+    object.transformation();
+  }
 
-  
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateScaleMatrix(Object2Sizedx,Object2Sizedy,Object2Sizedz));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object2Sizedx,0.0,0.0)); 
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateRotationZMatrix(Object2AngleZ));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object2PositionX,Object2PositionY,Object2PositionZ));
-  
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix2 = MatrixMul(uMMatrix2,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateScaleMatrix(Object3Sizedx,Object3Sizedy,Object3Sizedz));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object3Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object3AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object3PositionX,Object3PositionY,Object3PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object2Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object2AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object2PositionX,Object2PositionY,Object2PositionZ));
-  
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object1Sizedx,0.0,0.0)); 
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateRotationZMatrix(Object1AngleZ));
-  uMMatrix3 = MatrixMul(uMMatrix3,CreateTranslationMatrix(Object1PositionX,Object1PositionY,Object1PositionZ));
-  
-  uMMatrix0 = MatrixMul(uMMatrix0,CreateScaleMatrix(LightSize,LightSize,LightSize));
-  uMMatrix0 = MatrixMul(uMMatrix0,CreateTranslationMatrix(LightPositionX,LightPositionY,LightPositionZ));
-  
-  //alert(uPMatrix);
-  
   //Render Scene
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight); 
-  gl.clearColor(1.0,0.0,0.0,1.0); //Wyczyszczenie obrazu kolorem czerwonym
+  gl.clearColor(1.0,1.0,1.0,1.0); //Wyczyszczenie obrazu kolorem czerwonym
   gl.clearDepth(1.0);             //Wyczyścienie bufora głebi najdalszym planem
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.useProgram(shaderProgram)   //Użycie przygotowanego programu shaderowego
@@ -211,75 +167,50 @@ function Tick()
   gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uPMatrix"), false, new Float32Array(uPMatrix)); //Wgranie macierzy kamery do pamięci karty graficznej
   gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uVMatrix"), false, new Float32Array(uVMatrix));
   gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),1.0);
-  
-  
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix1));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix1)));
+  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uLightPosition"),0,0,0);
   
   gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));  //Przekazanie położenia
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
   gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
   
-  gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexNormal"));  //Przekazywanie wektorów normalnych
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
-  gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexNormal"), vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+  //gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexNormal"));  //Przekazywanie wektorów normalnych
+  //gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
+  //gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexNormal"), vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
   
-  gl.uniform3f(gl.getUniformLocation(shaderProgram, "uLightPosition"),LightPositionX,LightPositionY,LightPositionZ);
-  
-  gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  
-  //Drugi Obiekt
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix2));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix2)));
-  gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  
-  //Trzeci Obiekt
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix3));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix3)));
-  gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
-  
-  //Obiekt Światła
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uMMatrix"), false, new Float32Array(uMMatrix0));
-  gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "uInvMMatrix"), false, new Float32Array(MatrixTransposeInverse(uMMatrix0)));
-  gl.uniform1f(gl.getUniformLocation(shaderProgram, "uNormalMul"),-1.0);  
-  gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems*vertexPositionBuffer.itemSize); //Faktyczne wywołanie rendrowania
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+  for(object of objects){
+    gl = object.render(gl);
+  }
+
+  for(light of lights){
+    light.renderLightObject(gl);
+  }
   
   setTimeout(Tick,100);
 }
 function handlekeydown(e)
 {
- // Q W E A S D
- if(e.keyCode==87) angleX=angleX+1.0; //W
- if(e.keyCode==83) angleX=angleX-1.0; //S
- if(e.keyCode==68) angleY=angleY+1.0;
- if(e.keyCode==65) angleY=angleY-1.0;
- if(e.keyCode==81) angleZ=angleZ+1.0;
- if(e.keyCode==69) angleZ=angleZ-1.0;
+  // Q W E A S D
+  if(e.keyCode==87) angleX=angleX+1.0; //W
+  if(e.keyCode==83) angleX=angleX-1.0; //S
+  if(e.keyCode==68) angleY=angleY+1.0;
+  if(e.keyCode==65) angleY=angleY-1.0;
+  if(e.keyCode==81) angleZ=angleZ+1.0;
+  if(e.keyCode==69) angleZ=angleZ-1.0;
  
- //U I O J K L
- if(e.keyCode==76) LightPositionX=LightPositionX+0.1;
- if(e.keyCode==74) LightPositionX=LightPositionX-0.1;
- if(e.keyCode==73) LightPositionY=LightPositionY+0.1;
- if(e.keyCode==75) LightPositionY=LightPositionY-0.1;
- if(e.keyCode==85) LightPositionZ=LightPositionZ+0.1;
- if(e.keyCode==79) LightPositionZ=LightPositionZ-0.1;
- 
- mvSpeed = 0.5;
- //Z X
- if(e.keyCode==88) arm1.getShoulder().addToAngleZ(-mvSpeed); 
- if(e.keyCode==90) arm1.getShoulder().addToAngleZ(+mvSpeed);
- 
- //C V
- if(e.keyCode==67) arm1.getElbow().addToAngleZ(-mvSpeed);
- if(e.keyCode==86) arm1.getElbow().addToAngleZ(+mvSpeed);
- 
- //B N
- if(e.keyCode==66) arm1.getHand().addToAngleZ(-mvSpeed);
- if(e.keyCode==78) arm1.getHand().addToAngleZ(+mvSpeed);
+  for(light of lights){
+    light.move(e);
+  }
+
+  for(object of objects){
+    object.animate(e);
+  }
 }
 </script>
 </head>
 <body onload="startGL()" onkeydown="handlekeydown(event)">
-<canvas id="canvas3D" width="640" height="480" style="border: solid black 1px"></canvas>
+<canvas id="canvas3D" width="1000" height="480" style="border: solid black 1px"></canvas>
+WSAD - kamera
 </body>
 </html>

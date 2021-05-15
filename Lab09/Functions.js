@@ -270,3 +270,71 @@ function CreateTetris()
   
   return [indexes, vertexPosition, vertexNormal];
 }
+
+async function wioska(){
+  //let vertexPosition = []; //Każdy punkt 3 składowe - X1,Y1,Z1
+  let vertexNormal = [];
+  //let indexes = [];
+  let result = [];
+  result = await readOBJFromFile("wioska.obj")
+  .then(arrays => {
+    return [arrays[0], arrays[1], vertexNormal];
+  });
+
+  console.log(result);
+
+  //console.log(obj);
+  return result;
+}
+
+function OBJParse(objText){
+  var obj = {};
+  var vertexMatches = objText.match(/^v( -?\d+(\.\d+)?){3}$/gm);
+  //var indexMatches = objText.match(/^f( \d+\/\d+\/\d+.*){3}$/gm);
+  var indexMatches = objText.match(/^f( \d+){3}$/gm);
+
+  let vertexPosition = [];
+  if (vertexMatches)
+  {
+      
+      vertexMatches.map(function(vertex)
+      {
+          var vertices = vertex.split(" ");
+          vertices.shift();
+          vertices = vertices.map(Number);
+          vertexPosition.push(...vertices);
+      });
+  }
+
+  let indexesArr = [];
+
+  if (indexMatches)
+  {
+      indexMatches.map(function(index)
+      {
+          var indexes = index.split(" ");
+          indexes.shift();
+          indexes = indexes.map(Number);
+          indexesArr.push(...indexes)
+      });
+  }
+
+  vertexPosition.unshift(0,0,0);
+  return [indexesArr, vertexPosition];
+}
+
+function readOBJFromFile(file)
+{
+  return fetch(file)
+    .then(response => response.text())
+    .then(data => OBJParse(data))
+    .then(parsed => {
+      return parsed;
+    })
+}
+
+//console.log( readTextFile("wioska.obj") );
+
+
+
+//wioska();
