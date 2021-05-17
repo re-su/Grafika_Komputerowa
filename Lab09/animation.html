@@ -24,7 +24,7 @@ var indexBuffer;
 
 async function startGL() 
 {
-  alert("Uwaga! Użyto tutaj AJAX i fetch do wczytania pliku .obj");
+  alert("Uwaga! Użyto tutaj fetch do wczytania pliku .obj");
   let canvas = document.getElementById("canvas3D"); //wyszukanie obiektu w strukturze strony 
   gl = canvas.getContext("experimental-webgl"); //pobranie kontekstu OpenGL'u z obiektu canvas
   gl.viewportWidth = canvas.width; //przypisanie wybranej przez nas rozdzielczości do systemu OpenGL
