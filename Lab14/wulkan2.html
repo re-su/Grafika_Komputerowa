@@ -354,7 +354,7 @@ function updatePointCloud(vertexPosition,vertexVelocity,vertexColor,vertexAge,n,
   for(let i=0;i<n;i++)
   {
     vertexPosition[i*3+0] = vertexPosition[i*3+0] + vertexVelocity[i*3+0]*dt;
-    vertexPosition[i*3+1] = vertexPosition[i*3+1] + vertexVelocity[i*3+1]*dt;
+    vertexPosition[i*3+1] = (vertexPosition[i*3+1] + vertexVelocity[i*3+1]*dt);
     vertexPosition[i*3+2] = vertexPosition[i*3+2] + vertexVelocity[i*3+2]*dt;
     
     vertexColor[i*3+1] = vertexColor[i*3+1] * 0.96;
@@ -362,7 +362,7 @@ function updatePointCloud(vertexPosition,vertexVelocity,vertexColor,vertexAge,n,
 
     vertexVelocity[i*3+0] = vertexVelocity[i*3+0] + (Math.random())*vertexPosition[i*3+1]*5 - (Math.random())*vertexPosition[i*3+1]*5;
     vertexVelocity[i*3+1] = vertexVelocity[i*3+1];
-    vertexVelocity[i*3+2] = vertexVelocity[i*3+2];
+    vertexVelocity[i*3+2] = vertexVelocity[i*3+2] + (Math.random())*vertexPosition[i*3+1]*5 - (Math.random())*vertexPosition[i*3+1]*5;
     
     vertexAge[i] = vertexAge[i] - dt;
     if(vertexAge[i]<0)
